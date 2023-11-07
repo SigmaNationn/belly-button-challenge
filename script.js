@@ -1,0 +1,80 @@
+// Function to update the charts and metadata
+function updateCharts(selectedSample) {
+    d3.json("https://2u-data-curriculum-team.s3.amazonaws.com/dataviz-classroom/v1.1/14-Interactive-Web-Visualizations/02-Homework/samples.json").then(data => {
+        // Extract data for the selected sample
+        var samples = data.samples;
+        var metadata = data.metadata;
+
+        var selectedSampleData = samples.find(sample => sample.id === selectedSample);
+        var selectedMetadata = metadata.find(meta => meta.id === parseInt(selectedSample));
+
+        // Extract the top 10 OTUs for the bar chart
+        var sampleValues = selectedSampleData.sample_values.slice(0, 10);
+        var otuIds = selectedSampleData.otu_ids.slice(0, 10);
+        var otuLabels = selectedSampleData.otu_labels.slice(0, 10);
+
+        // Create the bar chart
+        var barData = [{
+            x: sampleValues,
+            y: otuIds.map(otuId => `OTU ${otuId}`),
+            text: otuLabels,
+            type: "bar",
+            orientation: "h"
+        }];
+        var barLayout = {
+            title: `Top 10 OTUs for Sample ${selectedSample}`
+        };
+        Plotly.newPlot("bar", barData, barLayout);
+
+        // Create the bubble chart
+        var bubbleData = [{
+            x: selectedSampleData.otu_ids,
+            y: selectedSampleData.sample_values,
+            mode: "markers",
+            marker: {
+                size: selectedSampleData.sample_values,
+                color: selectedSampleData.otu_ids,
+                colorscale: "Earth"
+            },
+            text: selectedSampleData.otu_labels
+        }];
+        var bubbleLayout = {
+            title: `OTU Frequency for Sample ${selectedSample}`,
+            xaxis: { title: "OTU ID" },
+            yaxis: { title: "Sample Value" }
+        };
+        Plotly.newPlot("bubble", bubbleData, bubbleLayout);
+
+        // Display the metadata
+        var metadataDiv = d3.select("#sample-metadata");
+        metadataDiv.html("");
+        Object.entries(selectedMetadata).forEach(([key, value]) => {
+            metadataDiv.append("p").text(`${key}: ${value}`);
+        });
+    });
+}
+
+// Initialize the dashboard
+function init() {
+    var dropdown = d3.select("#selDataset");
+
+    d3.json("https://2u-data-curriculum-team.s3.amazonaws.com/dataviz-classroom/v1.1/14-Interactive-Web-Visualizations/02-Homework/samples.json").then(data => {
+        var sampleNames = data.names;
+
+        sampleNames.forEach(sample => {
+            dropdown.append("option").text(sample).property("value", sample);
+        });
+
+        var initialSample = sampleNames[0];
+        updateCharts(initialSample);
+    });
+}
+
+// Event listener for the dropdown change
+function optionChanged() {
+    var dropdown = d3.select("#selDataset");
+    var newSample = dropdown.property("value");
+    updateCharts(newSample);
+}
+
+init(); // Initialize the dashboard
